@@ -25,12 +25,19 @@ async function run() {
     await client.connect();
 
     const menuCollection = client.db('restoDB').collection('menu')
+    const reviewCollection = client.db('restoDB').collection('reviews')
 
     // menu all data get database 
     app.get('/menu',async(req,res)=>{
         const result = await menuCollection.find().toArray();
         res.send(result);
     })
+
+    app.get('/reviews', async(req,res)=>{
+        const resut = await reviewCollection.find().toArray();
+        res.send(resut);
+    })
+
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
