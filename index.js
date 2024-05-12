@@ -28,7 +28,7 @@ async function run() {
     const reviewCollection = client.db("restoDB").collection("reviews");
     const cardCollection = client.db("restoDB").collection("cards");
 
-    // Admin user 
+    
 
 
     // user related api
@@ -82,6 +82,35 @@ async function run() {
       const result = await cardCollection.deleteOne(query);
       res.send(result)
     })
+
+
+    // Admin user 
+    app.get('/users', async(req,res)=>{
+      const result = await userCollection.find().toArray();
+        res.send(result);
+     })
+
+     //user deleted 
+     app.delete('/users/:id', async (req , res)=>{
+        const id = req.params.id;
+        const query = {_id : new ObjectId(id) }
+        const result = await userCollection.deleteOne(query);
+        res.send(result);
+     })
+
+     // user admin 
+
+     app.patch('/users/admin/:id', async(req , res)=> {
+        const id = req.params.id;
+        const filter = {_id : new ObjectId(id) }
+        const updateDoc = {
+          $set:{
+            role : 'admin'
+          }
+        }
+        const result = await userCollection.updateOne(filter , updateDoc);
+        res.send(result);
+     })
 
 
     // Send a ping to confirm a successful connection
