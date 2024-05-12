@@ -28,13 +28,24 @@ async function run() {
     const reviewCollection = client.db("restoDB").collection("reviews");
     const cardCollection = client.db("restoDB").collection("cards");
 
+    // Admin user 
+
 
     // user related api
     app.post('/users', async(req , res)=>{
       const user = req.body;
+      // google login user allready existing or not 
+      // insert email if users dose not exists
+      const query = {email : user.email }
+      const existingUser = await userCollection.findOne(query);
+      if(existingUser){
+        return res.send({ message : 'user all ready existing ' , insertedId : null})
+      }
+
       const result = await userCollection.insertOne(user);
       res.send(result);
     })
+
 
     // menu all data get database
     app.get("/menu", async (req, res) => {
