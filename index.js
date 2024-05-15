@@ -1,4 +1,6 @@
 const express = require("express");
+const jwt = require("jsonwebtoken");
+
 const app = express();
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
@@ -28,24 +30,23 @@ async function run() {
     const reviewCollection = client.db("restoDB").collection("reviews");
     const cardCollection = client.db("restoDB").collection("cards");
 
-    
-
-
     // user related api
-    app.post('/users', async(req , res)=>{
+    app.post("/users", async (req, res) => {
       const user = req.body;
-      // google login user allready existing or not 
+      // google login user allready existing or not
       // insert email if users dose not exists
-      const query = {email : user.email }
+      const query = { email: user.email };
       const existingUser = await userCollection.findOne(query);
-      if(existingUser){
-        return res.send({ message : 'user all ready existing ' , insertedId : null})
+      if (existingUser) {
+        return res.send({
+          message: "user all ready existing ",
+          insertedId: null,
+        });
       }
 
       const result = await userCollection.insertOne(user);
       res.send(result);
-    })
-
+    });
 
     // menu all data get database
     app.get("/menu", async (req, res) => {
@@ -65,7 +66,7 @@ async function run() {
       const query = { email: email };
       const result = await cardCollection.find(query).toArray();
       res.send(result);
-      console.log(result);
+      // console.log(result);
     });
 
     // card add Database
@@ -76,42 +77,63 @@ async function run() {
     });
 
     // delete Dashbord
-    app.delete('/cards/:id', async(req, res)=>{
+    app.delete("/cards/:id", async (req, res) => {
       const id = req.params.id;
-      const query = {_id : new ObjectId(id)};
+      const query = { _id: new ObjectId(id) };
       const result = await cardCollection.deleteOne(query);
-      res.send(result)
-    })
+      res.send(result);
+    });
 
-
-    // Admin user 
-    app.get('/users', async(req,res)=>{
-      const result = await userCollection.find().toArray();
-        res.send(result);
-     })
-
-     //user deleted 
-     app.delete('/users/:id', async (req , res)=>{
-        const id = req.params.id;
-        const query = {_id : new ObjectId(id) }
-        const result = await userCollection.deleteOne(query);
-        res.send(result);
-     })
-
-     // user admin 
-
-     app.patch('/users/admin/:id', async(req , res)=> {
-        const id = req.params.id;
-        const filter = {_id : new ObjectId(id) }
-        const updateDoc = {
-          $set:{
-            role : 'admin'
-          }
+    // middlewares -> 3
+    const verifyToken = (req,res,next) =>{
+      console.log('insert verify token',req.headers.authorization);
+      if(!req.headers.authorization){
+        return res.status(401).send({message : 'forbidden access'})
+      }
+      const token = req.headers.authorization.split(' ')[1]
+      jwt.verify(token , process.env.ACCESS_TOKEN_SECRET, (err , decoded) => {
+        if(err){
+          return res.status(401).send({message : 'forbidden access'})
         }
-        const result = await userCollection.updateOne(filter , updateDoc);
-        res.send(result);
-     })
+        req.decoded = decoded;
+        next();
+      } )
+      // next();
+    }
 
+    // Admin user related api 
+    app.get('/users', verifyToken , async (req, res) => {
+      const result = await userCollection.find().toArray();
+      res.send(result);
+    });
+
+    //user deleted
+    app.delete("/users/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await userCollection.deleteOne(query);
+      res.send(result);
+    });
+
+    // user admin
+    app.patch("/users/admin/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          role: "admin",
+        },
+      };
+      const result = await userCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
+
+    //  jwt related api -> 1
+    app.post('/jwt' , async(req,res)=>{
+      const user = req.body;
+      const token = jwt.sign(user ,process.env.ACCESS_TOKEN_SECRET , {expiresIn: '1h'})
+      res.send({token})
+    })
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
