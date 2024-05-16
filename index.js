@@ -146,17 +146,22 @@ async function run() {
     });
 
     // user admin
-    app.patch("/users/admin/:id", verifyToken, verifyAdmin, async (req, res) => {
-      const id = req.params.id;
-      const filter = { _id: new ObjectId(id) };
-      const updateDoc = {
-        $set: {
-          role: "admin",
-        },
-      };
-      const result = await userCollection.updateOne(filter, updateDoc);
-      res.send(result);
-    });
+    app.patch(
+      "/users/admin/:id",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const id = req.params.id;
+        const filter = { _id: new ObjectId(id) };
+        const updateDoc = {
+          $set: {
+            role: "admin",
+          },
+        };
+        const result = await userCollection.updateOne(filter, updateDoc);
+        res.send(result);
+      }
+    );
 
     //  jwt related api -> 1
     app.post("/jwt", async (req, res) => {
@@ -167,13 +172,29 @@ async function run() {
       res.send({ token });
     });
 
-    // ------------------- Menu inserted database ------------------------- 
+    // ------------------- Menu inserted database -------------------------
 
-    app.post('/menu', verifyToken , verifyAdmin,  async(req,res)=> {
+    app.post("/menu", verifyToken, verifyAdmin, async (req, res) => {
       const menu = req.body;
       const result = await menuCollection.insertOne(menu);
       res.send(result);
-    })
+    });
+    // ------------------- Menu Deleted database -------------------------
+
+    app.delete("/menu/:id", verifyToken, verifyAdmin, async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await menuCollection.deleteOne(query);
+      res.send(result);
+    });
+
+    // ------------------- Menu Update database -------------------------
+    // app.get("/menu/:id", async (req, res) => {
+    //   const id = req.params.id;
+    //   const query = { _id: new ObjectId(id) };
+    //   const result = await menuCollection.updateOne(query);
+    //   res.send(result);
+    // });
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
