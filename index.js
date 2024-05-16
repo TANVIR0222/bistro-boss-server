@@ -103,8 +103,6 @@ async function run() {
       // next();
     };
 
-  
-
     // user verifyAdmin after verifyToken
     const verifyAdmin = async (req, res, next) => {
       const email = req.decoded.email;
@@ -168,6 +166,14 @@ async function run() {
       });
       res.send({ token });
     });
+
+    // ------------------- Menu inserted database ------------------------- 
+
+    app.post('/menu', verifyToken , verifyAdmin,  async(req,res)=> {
+      const menu = req.body;
+      const result = await menuCollection.insertOne(menu);
+      res.send(result);
+    })
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
