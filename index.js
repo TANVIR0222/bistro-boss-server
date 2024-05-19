@@ -2,7 +2,7 @@ const express = require("express");
 const jwt = require("jsonwebtoken");
 
 // ----- py -------
-const stripe = require("stripe")('sk_test_51PHMzT2MMwn60ibKUaJ8st8a6Xgu7gBwUmMoHfggOEDw8XzBNkY538qCabTlT6oyUBYWnTBj4kPPIR5J9TVlKAYt00YqHeMTAD');
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 const app = express();
 // app.use(express.static("public"));
@@ -29,7 +29,7 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
 
     const userCollection = client.db("restoDB").collection("users");
     const menuCollection = client.db("restoDB").collection("menu");
@@ -265,11 +265,90 @@ async function run() {
       res.send(result);
     })
 
+      // ----------------- Admin Stats -----------------
+    app.get('/admin-stats' , verifyToken , verifyAdmin, async(req,res)=> {
+      const user = await userCollection.estimatedDocumentCount();
+      const menuIems = await menuCollection.estimatedDocumentCount();
+      const orders = await paymentCollection.estimatedDocumentCount();
+
+      // bangla
+      // const payments = await paymentCollection.find().toArray();
+      // const revenue = payments.reduce((items, payment) => items+payment.price ,0)
+
+      // update
+      const result  = await paymentCollection.aggregate([
+        {
+          $group:{
+            _id: null,
+            totalReveneu : {
+              $sum : '$price'
+            }
+          }
+        }
+      ]).toArray();
+
+      const revenue = result.length > 0 ? result[0].totalReveneu : 0;
+
+      res.send({
+        user,
+        menuIems,
+        orders,
+        revenue
+      })
+    })
+
+    // ----------------usintg aggregate pipeline --------------
+    
+    app.get('/order-stats', async (req,res)=>{
+      const result = await paymentCollection.aggregate([
+
+        {
+          $unwind: '$menuItemIds' // split the array into separate documents
+        },
+        {
+          $lookup:{
+            from: 'menu',
+            localField: 'menuItemIds',
+            foreignField: '_id',
+            as:'menuItems'
+          }
+        },
+        {
+          $unwind:'$menuItems'
+        },
+        {
+          $group:{
+            _id:'$menuItems.category',
+            quantity:{
+              $sum:1
+            },
+            revenue:{
+              $sum: '$menuItems.price'
+            }
+          }
+        },
+        {
+          $project: {
+            _id: 0,
+            category: '$_id',
+            quantity: '$quantity',
+            revenue : '$revenue'
+          }
+        }
+
+
+      ]).toArray();
+
+      res.send({
+        result,
+      })
+    })
+
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
-    );
+    // await client.db("admin").command({ ping: 1 });
+    // console.log(
+    //   "Pinged your deployment. You successfully connected to MongoDB!"
+    // );
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
